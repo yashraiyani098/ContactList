@@ -1,16 +1,22 @@
 package com.yash.demo
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.ContactsContract
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
+import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.yash.demo.databinding.ActivityMainBinding
 import com.yash.demo.model.Contact
 
@@ -22,8 +28,21 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        enableEdgeToEdge()
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Add this code to change status bar icon and text color
+        val windowInsetsController = ViewCompat.getWindowInsetsController(window.decorView)
+        windowInsetsController?.isAppearanceLightStatusBars = true
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
 
         binding.scrollView.viewTreeObserver.addOnScrollChangedListener {
             sectionPositions.toSortedMap().entries.findLast {
@@ -97,12 +116,18 @@ class MainActivity : AppCompatActivity() {
     private fun updateSidebarHighlight(letter: Char) {
         if (highlightedLetter == letter) return
         highlightedLetter = letter
+
+        // Reset previous highlighted view
         highlightedView?.apply {
             setBackgroundResource(0)
             setTextColor(ContextCompat.getColor(context, R.color.sidebar_text))
         }
-        (letter - 'A').takeIf { it in 0 until binding.alphabetSidebar.childCount }?.let {
-            (binding.alphabetSidebar.getChildAt(it) as TextView).apply {
+
+        // Highlight the new letter
+        (letter - 'A').takeIf { it in 0 until binding.alphabetSidebar.childCount }?.let { index ->
+            val container = binding.alphabetSidebar.getChildAt(index) as LinearLayout
+            val letterTextView = container.getChildAt(0) as TextView
+            letterTextView.apply {
                 setBackgroundResource(R.drawable.circle_background)
                 setTextColor(ContextCompat.getColor(context, R.color.white))
                 highlightedView = this
@@ -110,15 +135,53 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun setupAlphabetSidebar() {
         ('A'..'Z').forEach { letter ->
-            binding.alphabetSidebar.addView(TextView(this).apply {
+            // Create a container for each letter and its line
+            val letterContainer = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = 1  // Space above each letter
+                    bottomMargin = 1  // Space below each letter
+                }
+            }
+
+            // Create the letter TextView
+            val letterTextView = TextView(this).apply {
                 text = letter.toString()
                 textSize = 12f
-                setPadding(8, 4, 8, 4)
+                setPadding(8, 10, 8, 10)
                 gravity = android.view.Gravity.CENTER
                 setTextColor(ContextCompat.getColor(context, R.color.sidebar_text))
-            })
+                tag = letter  // Store the letter for later reference
+            }
+
+            // Create the line view
+            val lineView = View(this).apply {
+                // Function to convert dp to pixels
+                fun Float.toPx(): Int = (this * resources.displayMetrics.density).toInt()
+
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,  // Width of the line
+                    0.7f.toPx().coerceAtLeast(1)    // Height of the line in pixels, ensuring at least 1px
+                ).apply {
+                    gravity = Gravity.CENTER_HORIZONTAL
+                    topMargin = 1.0f.toPx().coerceAtLeast(1)
+                }
+                setBackgroundColor(ContextCompat.getColor(context, R.color.sidebar_text))
+            }
+
+
+            // Add letter and line to container
+            letterContainer.addView(letterTextView)
+            letterContainer.addView(lineView)
+
+            // Add container to sidebar
+            binding.alphabetSidebar.addView(letterContainer)
         }
 
         binding.alphabetSidebar.setOnTouchListener { v, event ->
@@ -126,7 +189,12 @@ class MainActivity : AppCompatActivity() {
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
                     val index = (event.y / (v.height / binding.alphabetSidebar.childCount)).toInt()
                         .coerceIn(0, binding.alphabetSidebar.childCount - 1)
-                    val letter = (binding.alphabetSidebar.getChildAt(index) as TextView).text[0]
+
+                    // Get the letter from the container
+                    val container = binding.alphabetSidebar.getChildAt(index) as LinearLayout
+                    val letterTextView = container.getChildAt(0) as TextView
+                    val letter = letterTextView.text[0]
+
                     updateSidebarHighlight(letter)
                     sectionPositions[letter]?.let {
                         binding.contactListContainer.getChildAt(it)?.let { view ->

@@ -3,6 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:id="@+id/main"
     android:background="@color/white">
 
     <!-- Top Bar -->
@@ -14,7 +15,7 @@
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="@color/black"
-        android:padding="16dp"
+        android:padding="15dp"
         android:background="@color/white" />
 
     <!-- Main Content Area -->
@@ -45,12 +46,12 @@
                 android:id="@+id/stickyHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@color/white"
+                android:background="#F8F8F8"
                 android:padding="12dp"
                 android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:visibility="gone" />
+                android:visibility="visible" />
 
             <TextView
                 android:id="@+id/currentLetterText"
@@ -67,7 +68,7 @@
         <!-- Alphabet Sidebar -->
         <LinearLayout
             android:id="@+id/alphabetSidebar"
-            android:layout_width="wrap_content"
+            android:layout_width="40dp"
             android:layout_height="wrap_content"
             android:gravity="center"
             android:layout_gravity="center_vertical"
